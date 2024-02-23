@@ -3,10 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 
-def run(episodes, render=False):
+def run(episodes, is_Training=False, render=True):
     env = gym.make("FrozenLake-v1", map_name="8x8", is_slippery=False, render_mode="human" if render else None)
 
-    q = np.zeros((env.observation_space.n, env.action_space.n)) # init a 64 x 4 array
+    if(is_Training):
+        q = np.zeros((env.observation_space.n, env.action_space.n)) # init a 64 x 4 array
+    else:
+        f = open("frozen_lake8x8.pk1","rb")
+        q = pickle.load(f)
+        f.close()
 
     learning_rate_a = 0.9 # alpha/learning rate
     discount_factor_g = 0.9 # gamma or discount factor
@@ -23,16 +28,17 @@ def run(episodes, render=False):
         truncated = False # True when actions > 200
 
         while(not terminated and not truncated):
-            if rng.random() < epsilon:
+            if is_Training and rng.random() < epsilon:
                 action = env.action_space.sample() # actions: 0=left, 1=down, 2=right, 3=up
             else:
                 action = np.argmax(q[state,:])
 
             new_state, reward,terminated,truncated,_ = env.step(action)
 
-            q[state,action] = q[state,action] + learning_rate_a * (
-                reward + discount_factor_g * np.max(q[new_state,:]) - q[state,action]
-            )
+            if is_Training:
+                q[state,action] = q[state,action] + learning_rate_a * (
+                    reward + discount_factor_g * np.max(q[new_state,:]) - q[state,action]
+                )
 
             state = new_state
     
@@ -49,9 +55,10 @@ def run(episodes, render=False):
     plt.plot(sum_rewards)
     plt.savefig("frozen_lake8x8.png")
 
-    f = open("frozen_lake8x8.pk1","wb")
-    pickle.dump(q,f)
-    f.close()
+    if is_Training:
+        f = open("frozen_lake8x8.pk1","wb")
+        pickle.dump(q,f)
+        f.close()
 
 if __name__ == "__main__":
-    run(15000) 
+    run(1000, is_Training=True, render=True) 
